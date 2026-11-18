@@ -1,0 +1,36 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galle Routes</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+    <nav class="navbar">
+        <a href="{% url 'home' %}" class="logo">
+            <span class="logo-icon">G</span> Galle Routes
+        </a>
+        <ul class="nav-links">
+            <li><a href="{% url 'home' %}" class="{% if request.path == '/' %}active{% endif %}">Home</a></li>
+            <li><a href="{% url 'place_list' %}" class="{% if '/places/' in request.path %}active{% endif %}">Places</a></li>
+            <li><a href="{% url 'map_view' %}" class="{% if '/map/' in request.path %}active{% endif %}">Interactive Map</a></li>
+            <li><a href="{% url 'itinerary' %}" class="btn-primary" style="color:white;">My Plan <span id="nav-plan-count"></span></a></li>
+        </ul>
+    </nav>
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+    
+    <script>
+        function updateNavCount() {
+            let plan = JSON.parse(localStorage.getItem('myPlan')) || [];
+            let counter = document.getElementById('nav-plan-count');
+            if (counter) { counter.innerText = plan.length > 0 ? `(${plan.length}/5)` : ''; }
+        }
+        document.addEventListener('DOMContentLoaded', updateNavCount);
+    </script>
+</body>
+</html>

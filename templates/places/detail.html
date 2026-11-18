@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% block content %}
+<div style="background:white; border-radius:20px; overflow:hidden; box-shadow:0 4px 15px rgba(0,0,0,0.05); margin-bottom:30px;">
+    {% if place.image %}
+        <img src="{{ place.image.url }}" style="width:100%; height:400px; object-fit:cover;">
+    {% endif %}
+    <div style="padding:40px;">
+        <div style="display:flex; gap:10px; align-items:center; margin-bottom:15px;">
+            <span class="badge badge-{{ place.category|lower }}">{{ place.category }}</span>
+            <span style="font-size:14px; color:var(--text-muted);">{{ place.distance }} km from Galle</span>
+        </div>
+        <h1 style="font-size:36px; margin:0 0 20px 0;">{{ place.name }}</h1>
+        
+        <button onclick="addToPlan('{{ place.id }}', '{{ place.name }}', '{{ place.latitude }}', '{{ place.longitude }}', '{{ place.category }}', '{{ place.distance }}', '{{ place.opening_time }}', '{% if place.image %}{{ place.image.url }}{% endif %}')" class="btn-primary" style="padding:12px 25px; font-size:16px;">
+            + Add to My Plan
+        </button>
+    </div>
+</div>
+
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap:30px;">
+    
+    <!-- LEFT SIDE: About, Times, and Photo Gallery -->
+    <div>
+        <div style="background:white; padding:30px; border-radius:15px; box-shadow:0 4px 15px rgba(0,0,0,0.05); margin-bottom: 30px;">
+            <h3>About this Place</h3>
+            <p style="color:var(--text-muted); line-height:1.7;">{{ place.description }}</p>
+            <h4 style="margin-top:30px;">Opening Times</h4>
+            <p style="color:var(--text-muted);">{{ place.opening_time }}</p>
+        </div>
+
+                <!-- Travel Tips Box -->
+        {% if place.travel_tips %}
+        <div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 20px; border-radius: 8px; margin-top: 20px; margin-bottom: 30px;">
+            <h4 style="margin: 0 0 10px 0; color: #b45309; font-size: 15px;">💡 Travel Tips</h4>
+            
+            <!-- NEW: The tips list -->
+            <div class="tips-list" style="font-size: 14px; color: #78350f; line-height: 1.6;">
+                {{ place.travel_tips|linebreaks }}
+            </div>
+            
+        </div>
+        {% endif %}
+
+        <!-- NEW: Photo Gallery Section -->
+        {% if place.gallery_images.all %}
+        <div style="background:white; padding:30px; border-radius:15px; box-shadow:0 4px 15px rgba(0,0,0,0.05);">
+            <h3>Photo Gallery</h3>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 15px;">
+                {% for photo in place.gallery_images.all %}
+                    <div style="border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); position: relative;">
+                        <img src="{{ photo.image.url }}" alt="{{ photo.caption }}" style="width: 100%; height: 150px; object-fit: cover; transition: transform 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                        {% if photo.caption %}
+                            <div style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); color: white; padding: 5px 10px; font-size: 11px;">
+                                {{ photo.caption }}
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- RIGHT SIDE: Map (Keep exactly as is) -->
+    <div style="background:white; padding:30px; border-radius:15px; box-shadow:0 4px 15px rgba(0,0,0,0.05); height: fit-content; position: sticky; top: 100px;">
+        <h3>Location & Route</h3>
+        <div id="detailMap" style="height: 300px; border-radius:10px; margin-top:20px;"></div>
+        <!-- NEW: Google Maps Directions Button -->
+        <a href="https://www.google.com/maps/dir/?api=1&destination={{ place.latitude }},{{ place.longitude }}" target="_blank" class="btn-primary" style="display: block; text-align: center; margin-top: 15px; padding: 12px; text-decoration: none; border-radius: 10px; font-weight: bold;">
+        Get Directions on Google Maps
+        </a>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    var map = L.map('detailMap').setView(['{{ place.latitude }}', '{{ place.longitude }}'], 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        referrerPolicy: 'strict-origin-when-cross-origin'
+    }).addTo(map);
+    
+    L.marker(['{{ place.latitude }}', '{{ place.longitude }}']).addTo(map).bindPopup("<b>{{ place.name }}</b>").openPopup();
+
+    function addToPlan(id, name, lat, lng, category, distance, time, image) {
+        let plan = JSON.parse(localStorage.getItem('myPlan')) || [];
+        
+        if (plan.length >= 5) { 
+            alert("You can only select up to 5 places!"); 
+            return; 
+        }
+        
+        if (plan.some(p => p.id == id)) { 
+            alert("Place already in your plan!"); 
+            return; 
+        }
+        
+        plan.push({id: Number(id), name: name, lat: Number(lat), lng: Number(lng), category: category, distance: distance, time: time, image: image});
+        localStorage.setItem('myPlan', JSON.stringify(plan));
+        
+        alert(name + " added to your itinerary!");
+        window.location.href = "/itinerary/";
+    }
+</script>
+{% endblock %}

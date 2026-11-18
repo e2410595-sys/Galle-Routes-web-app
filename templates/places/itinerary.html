@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:30px;">
+    <div>
+        <span style="background:#e3f2fd; color:var(--primary); padding:5px 15px; border-radius:20px; font-size:12px; font-weight:bold;">📅 One-Day Itinerary Planner</span>
+        <h1 style="margin:10px 0 5px 0;">My Day-Visit Itinerary</h1>
+        <p style="color:var(--text-muted); margin:0;">Organised schedule of your selected places within 25 km of Galle.</p>
+    </div>
+    <div style="display:flex; gap:15px; align-items:center;">
+        <div style="background:white; padding:10px 20px; border-radius:20px; font-weight:600; border:1px solid #e2e8f0;">
+            Selected: <span id="count-display" style="color:var(--primary);">0</span> / 5 places
+        </div>
+        <button onclick="clearPlan()" class="btn-outline" style="color:#e53e3e; border-color:#feb2b2;">Clear All</button>
+    </div>
+</div>
+
+<div class="itinerary-layout">
+    <!-- LEFT SIDE: The List -->
+    <div id="stops-container"></div>
+    
+    <!-- RIGHT SIDE: The Map -->
+    <div style="background:white; padding:20px; border-radius:15px; box-shadow:0 4px 15px rgba(0,0,0,0.05); height: fit-content;">
+        <h3 style="margin-top:0;">Itinerary Map View</h3>
+        <p style="color:var(--text-muted); font-size:13px; margin-bottom:15px;">Pins represent your chosen itinerary stops on the map.</p>
+        <div id="itineraryMap" style="height: 500px; border-radius:10px;"></div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // 1. Initialize Map
+    var map = L.map('itineraryMap').setView([6.0328, 80.2170], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        referrerPolicy: 'strict-origin-when-cross-origin'
+    }).addTo(map);
+    var markersLayer = L.layerGroup().addTo(map);
+
+    // 2. Function to render the list and the map
+    function renderItinerary() {
+        let plan = JSON.parse(localStorage.getItem('myPlan')) || [];
+        let container = document.getElementById('stops-container');
+        let countDisplay = document.getElementById('count-display');
+        
+        container.innerHTML = '';
+        countDisplay.innerText = plan.length;
+        markersLayer.clearLayers();
+
+        // If empty, show a message
+        if (plan.length === 0) {
+            container.innerHTML = `<div style="text-align:center; padding:50px; background:white; border-radius:15px; color:var(--text-muted);">
+                <h3>Your plan is empty</h3>
+                <p>Go to the <a href="/places/" style="color:var(--primary);">Places page</a> and add up to 5 stops!</p>
+            </div>`;
+            return;
+        }
+
+        // Loop through the plan and create cards + map pins
+        plan.forEach((place, index) => {
+            let imgHtml = place.image ? `<img src="${place.image}" style="width:60px; height:60px; border-radius:10px; object-fit:cover;">` : '';
+            
+            // Add the card to the left side
+            container.innerHTML += `
+                <div class="stop-card">
+                    <div class="stop-number">${index + 1}</div>
+                    ${imgHtml}
+                    <div class="stop-details" style="flex-grow: 1;">
+                        <span class="badge badge-${place.category.toLowerCase()}">${place.category}</span>
+                        <span style="font-size:12px; color:var(--text-muted); margin-left:10px;"> ${place.distance} km</span>
+                        <h3 style="margin-top:5px;">${place.name}</h3>
+                        <p>🕒 ${place.time}</p>
+                    </div>
+                    <button class="remove-btn" onclick="removeFromPlan(${place.id})">Remove</button>
+                </div>
+            `;
+            
+            // Add the pin to the map
+            L.marker([place.lat, place.lng]).addTo(markersLayer).bindPopup(`<b>${index + 1}. ${place.name}</b>`);
+        });
+
+        // Draw the dashed line if there is more than 1 place
+        if (plan.length > 1) {
+            let latlngs = plan.map(p => [p.lat, p.lng]);
+            L.polyline(latlngs, {color: '#1565c0', weight: 3, dashArray: '5, 10'}).addTo(markersLayer);
+            map.fitBounds(latlngs, {padding: [50, 50]});
+        } else {
+            map.setView([plan[0].lat, plan[0].lng], 13);
+        }
+    }
+
+    // 3. Remove function
+    function removeFromPlan(id) {
+        let plan = JSON.parse(localStorage.getItem('myPlan')) || [];
+        plan = plan.filter(p => p.id !== id);
+        localStorage.setItem('myPlan', JSON.stringify(plan));
+        renderItinerary();
+        updateNavCount(); // Updates the Navbar count
+    }
+
+    // 4. Clear function
+    function clearPlan() {
+        if(confirm("Are you sure you want to clear your entire itinerary?")) {
+            localStorage.removeItem('myPlan');
+            renderItinerary();
+            updateNavCount();
+        }
+    }
+
+    // Run when page loads
+    document.addEventListener('DOMContentLoaded', renderItinerary);
+</script>
+{% endblock %}
